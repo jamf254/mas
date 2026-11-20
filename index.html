@@ -3,7 +3,6 @@
 <head>
 	<meta charset='utf-8' />
 	<meta name='viewport' content='width=device-width, user-scalable=no' />
-	<link id='-gd-engine-icon' rel='icon' type='image/png' href='favicon.png' />
 	<title>MAS</title>
 	<style type='text/css'>
 
@@ -112,6 +111,10 @@
 			visibility: visible;
 		}
 	</style>
+<link id='-gd-engine-icon' rel='icon' type='image/png' href='index.icon.png' />
+<link rel='apple-touch-icon' href='index.apple-touch-icon.png'/>
+<link rel='manifest' href='index.manifest.json'>
+<script type='application/javascript'>window.addEventListener('load', () => {if ('serviceWorker' in navigator) {navigator.serviceWorker.register('index.service.worker.js');}});</script>
 M. A. S.
 </head>
 <body>
@@ -137,17 +140,11 @@ M. A. S.
 	<script type='text/javascript' src='index.js'></script>
 	<script type='text/javascript'>//<![CDATA[
 
-		var engine = new Engine;
-		var setStatusMode;
-		var setStatusNotice;
+		const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":1139184,"index.wasm":17501025},"focusCanvas":true,"gdnativeLibs":[]};
+		var engine = new Engine(GODOT_CONFIG);
 
 		(function() {
-
-			const EXECUTABLE_NAME = 'index';
-			const MAIN_PACK = 'index.pck';
 			const INDETERMINATE_STATUS_STEP_MS = 100;
-
-			var canvas = document.getElementById('canvas');
 			var statusProgress = document.getElementById('status-progress');
 			var statusProgressInner = document.getElementById('status-progress-inner');
 			var statusIndeterminate = document.getElementById('status-indeterminate');
@@ -163,19 +160,7 @@ M. A. S.
 			}
 			requestAnimationFrame(animate);
 
-			function adjustCanvasDimensions() {
-				var scale = window.devicePixelRatio || 1;
-				var width = window.innerWidth;
-				var height = window.innerHeight;
-				canvas.width = width * scale;
-				canvas.height = height * scale;
-				canvas.style.width = width + "px";
-				canvas.style.height = height + "px";
-			}
-			animationCallbacks.push(adjustCanvasDimensions);
-			adjustCanvasDimensions();
-
-			setStatusMode = function setStatusMode(mode) {
+			function setStatusMode(mode) {
 
 				if (statusMode === mode || !initializing)
 					return;
@@ -205,7 +190,6 @@ M. A. S.
 			}
 
 			function animateStatusIndeterminate(ms) {
-
 				var i = Math.floor(ms / INDETERMINATE_STATUS_STEP_MS % 8);
 				if (statusIndeterminate.children[i].style.borderTopColor == '') {
 					Array.prototype.slice.call(statusIndeterminate.children).forEach(child => {
@@ -215,8 +199,7 @@ M. A. S.
 				}
 			}
 
-			setStatusNotice = function setStatusNotice(text) {
-
+			function setStatusNotice(text) {
 				while (statusNotice.lastChild) {
 					statusNotice.removeChild(statusNotice.lastChild);
 				}
@@ -226,22 +209,6 @@ M. A. S.
 					statusNotice.appendChild(document.createElement('br'));
 				});
 			};
-
-			engine.setProgressFunc((current, total) => {
-
-				if (total > 0) {
-					statusProgressInner.style.width = current/total * 100 + '%';
-					setStatusMode('progress');
-					if (current === total) {
-						// wait for progress bar animation
-						setTimeout(() => {
-							setStatusMode('indeterminate');
-						}, 500);
-					}
-				} else {
-					setStatusMode('indeterminate');
-				}
-			});
 
 			function displayFailureNotice(err) {
 				var msg = err.message || err;
@@ -255,8 +222,22 @@ M. A. S.
 				displayFailureNotice('WebGL not available');
 			} else {
 				setStatusMode('indeterminate');
-				engine.setCanvas(canvas);
-				engine.startGame(EXECUTABLE_NAME, MAIN_PACK).then(() => {
+				engine.startGame({
+					'onProgress': function (current, total) {
+						if (total > 0) {
+							statusProgressInner.style.width = current/total * 100 + '%';
+							setStatusMode('progress');
+							if (current === total) {
+								// wait for progress bar animation
+								setTimeout(() => {
+									setStatusMode('indeterminate');
+								}, 500);
+							}
+						} else {
+							setStatusMode('indeterminate');
+						}
+					},
+				}).then(() => {
 					setStatusMode('hidden');
 					initializing = false;
 				}, displayFailureNotice);
